@@ -21,6 +21,10 @@ func GetInstance() *genecon.GeneConDB {
 	return instance
 }
 
-func HumanGene(name string) (*genecon.Gene, error) {
-	return instance.HumanGene(name)
+func Convert(name string, species string) (*genecon.Conversion, error) {
+	return instance.Convert(name, species)
+}
+
+func Gene(name string, species string) (*genecon.Gene, error) {
+	return instance.Gene(name, species)
 }

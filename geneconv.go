@@ -35,12 +35,12 @@ const HUMAN_SQL = `SELECT human.gene_id, human.gene_symbol, human.aliases, human
  	WHERE human_terms.term LIKE ?1 AND human.gene_id = human_terms.gene_id`
 
 const MOUSE_EXACT_SQL = `SELECT mouse.gene_id, mouse.gene_symbol, mouse.aliases, mouse.entrez, mouse.refseq, mouse.ensembl
-	 FROM mouse_terms, mouse
-	  WHERE LOWER(mouse_terms.term) = LOWER(?1) AND mouse.gene_id = mouse_terms.gene_id`
+	FROM mouse_terms, mouse
+	WHERE LOWER(mouse_terms.term) = LOWER(?1) AND mouse.gene_id = mouse_terms.gene_id`
 
 const HUMAN_EXACT_SQL = `SELECT human.gene_id, human.gene_symbol, human.aliases, human.entrez, human.refseq, human.ensembl
-	 FROM human_terms, human
-	  WHERE LOWER(human_terms.term) = LOWER(?1) AND human.gene_id = human_terms.gene_id`
+	FROM human_terms, human
+	WHERE LOWER(human_terms.term) = LOWER(?1) AND human.gene_id = human_terms.gene_id`
 
 const HUMAN_TAXONOMY_ID = 9606
 const MOUSE_TAXONOMY_ID = 10090
@@ -52,13 +52,23 @@ const STATUS_FOUND = "found"
 const STATUS_NOT_FOUND = "not found"
 
 type Taxonomy struct {
-	TaxId   uint   `json:"taxId"`
+	Id      uint64 `json:"id"`
 	Species string `json:"species"`
 }
 
+var HUMAN_TAX = Taxonomy{
+	Id:      HUMAN_TAXONOMY_ID,
+	Species: HUMAN_SPECIES,
+}
+
+var MOUSE_TAX = Taxonomy{
+	Id:      MOUSE_TAXONOMY_ID,
+	Species: MOUSE_SPECIES,
+}
+
 type BaseGene struct {
-	Taxonomy
-	Id string `json:"id"`
+	Taxonomy Taxonomy `json:"taxonomy"`
+	Id       string   `json:"id"`
 }
 
 type Gene struct {
@@ -101,10 +111,6 @@ func (geneconvdb *GeneConvDB) Close() {
 }
 
 func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpecies string, exact bool) (Conversion, error) {
-	var aliases string
-	var entrez string
-	var refseq string
-	var ensembl string
 	var sql string
 
 	var ret Conversion
@@ -134,8 +140,6 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 		search = fmt.Sprintf("%%%s%%", search)
 	}
 
-	log.Debug().Msgf("conv %s %s", search, sql)
-
 	rows, err := geneconvdb.db.Query(sql, search)
 
 	if err != nil {
@@ -144,51 +148,26 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 
 	defer rows.Close()
 
-	for rows.Next() {
-		var gene = Gene{}
-
-		if fromSpecies == HUMAN_SPECIES {
-			gene.TaxId = HUMAN_TAXONOMY_ID
-			gene.Species = HUMAN_SPECIES
-		} else {
-			gene.TaxId = MOUSE_TAXONOMY_ID
-			gene.Species = MOUSE_SPECIES
-		}
-
-		err := rows.Scan(&gene.Id,
-			&gene.Symbol,
-			&aliases,
-			&entrez,
-			&refseq,
-			&ensembl)
-
-		if err != nil {
-			return ret, err
-		}
-
-		for _, e := range strings.Split(entrez, ",") {
-			n, err := strconv.ParseUint(e, 10, 64)
-
-			if err == nil {
-				gene.Entrez = append(gene.Entrez, n)
-			}
-		}
-
-		gene.Aliases = strings.Split(aliases, ",")
-		gene.RefSeq = strings.Split(refseq, ",")
-		gene.Ensembl = strings.Split(ensembl, ",")
-
-		ret.Genes = append(ret.Genes, gene)
+	var tax Taxonomy
+	if fromSpecies == HUMAN_SPECIES {
+		tax = MOUSE_TAX
+	} else {
+		tax = HUMAN_TAX
 	}
+
+	genes, err := rowsToGenes(rows, tax)
+
+	if err != nil {
+		return ret, err
+	}
+
+	ret.Genes = append(ret.Genes, genes...)
 
 	return ret, nil
 }
 
-func (geneconvdb *GeneConvDB) Gene(search string, species string, exact bool) ([]Gene, error) {
-	var aliases string
-	var entrez string
-	var refseq string
-	var ensembl string
+func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool) ([]Gene, error) {
+
 	var sql string
 
 	species = strings.ToLower(species)
@@ -222,18 +201,28 @@ func (geneconvdb *GeneConvDB) Gene(search string, species string, exact bool) ([
 
 	defer rows.Close()
 
+	var tax Taxonomy
+	if species == HUMAN_SPECIES {
+		tax = HUMAN_TAX
+	} else {
+		tax = MOUSE_TAX
+	}
+
+	return rowsToGenes(rows, tax)
+}
+
+func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]Gene, error) {
+	var aliases string
+	var entrez string
+	var refseq string
+	var ensembl string
+
+	var ret = make([]Gene, 0)
+
 	for rows.Next() {
 		var gene Gene
 
-		if species == HUMAN_SPECIES {
-			gene.TaxId = HUMAN_TAXONOMY_ID
-			gene.Species = HUMAN_SPECIES
-
-		} else {
-			gene.TaxId = MOUSE_TAXONOMY_ID
-			gene.Species = MOUSE_SPECIES
-
-		}
+		gene.Taxonomy = tax
 
 		err := rows.Scan(&gene.Id,
 			&gene.Symbol,

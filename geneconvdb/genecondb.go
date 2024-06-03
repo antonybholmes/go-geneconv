@@ -25,6 +25,6 @@ func Convert(search string, fromSpecies string, toSpecies string, exact bool) (g
 	return instance.Convert(search, fromSpecies, toSpecies, exact)
 }
 
-func Gene(search string, species string, exact bool) ([]geneconv.Gene, error) {
-	return instance.Gene(search, species, exact)
+func GeneInfo(search string, species string, exact bool) ([]geneconv.Gene, error) {
+	return instance.GeneInfo(search, species, exact)
 }

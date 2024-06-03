@@ -35,10 +35,10 @@ with open("data/modules/geneconv/conversion.sql", "w") as f:
         human = genes[key][9606]
         mouse = genes[key][10090]
 
-        print(human)
-        print(mouse)
+        #print(human)
+        #print(mouse)
 
         print(
-            f"INSERT INTO conversion (human_id, mouse_id, human_gene_symbol, mouse_gene_symbol, human_entrez, mouse_entrez) VALUES ('{human[0]}', '{mouse[0]}', '{human[1]}', '{mouse[1]}', {human[2]}, {mouse[2]});",
+            f"INSERT INTO conversion (human_gene_id, mouse_gene_id, human_gene_symbol, mouse_gene_symbol, human_entrez, mouse_entrez) VALUES ('{human[0]}', '{mouse[0]}', '{human[1]}', '{mouse[1]}', {human[2]}, {mouse[2]});",
             file=f,
         )

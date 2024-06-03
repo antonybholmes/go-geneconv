@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/antonybholmes/go-sys"
-	"github.com/rs/zerolog/log"
 )
 
 const MOUSE_TO_HUMAN_EXACT_SQL = `SELECT human.gene_id, human.gene_symbol, human.aliases, human.entrez, human.refseq, human.ensembl
@@ -195,7 +194,6 @@ func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool
 	rows, err := geneconvdb.db.Query(sql, search)
 
 	if err != nil {
-		log.Debug().Msgf("gggg %v", err)
 		return ret, err
 	}
 
@@ -244,9 +242,9 @@ func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]Gene, error) {
 			}
 		}
 
-		gene.Aliases = strings.Split(aliases, ",")
-		gene.RefSeq = strings.Split(refseq, ",")
-		gene.Ensembl = strings.Split(ensembl, ",")
+		gene.Aliases = strings.Split(aliases, "|")
+		gene.RefSeq = strings.Split(refseq, "|")
+		gene.Ensembl = strings.Split(ensembl, "|")
 		ret = append(ret, gene)
 	}
 

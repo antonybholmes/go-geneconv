@@ -54,12 +54,12 @@ with open("data/modules/geneconv/human.sql", "w") as f:
         # merge aliases with withdrawn
         aliases = set(genes[hgi]["aliases"])
 
-        symbol = ",".join(sorted(genes[hgi]["symbol"])).replace("'", "")
-        aliases = ",".join(sorted(aliases)).replace("'", "")
+        symbol = "|".join(sorted(genes[hgi]["symbol"])).replace("'", "")
+        aliases = "|".join(sorted(aliases)).replace("'", "")
 
-        entrez = ",".join(sorted(genes[hgi]["entrez"])).replace("'", "")
-        refseq = ",".join(sorted(genes[hgi]["refseq"])).replace("'", "")
-        ensembl = ",".join(sorted(genes[hgi]["ensembl"])).replace("'", "")
+        entrez = "|".join(sorted(genes[hgi]["entrez"])).replace("'", "")
+        refseq = "|".join(sorted(genes[hgi]["refseq"])).replace("'", "")
+        ensembl = "|".join(sorted(genes[hgi]["ensembl"])).replace("'", "")
 
         print(
             f"INSERT INTO human (gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{hgi}', '{symbol}', '{aliases}', '{entrez}', '{refseq}', '{ensembl}');",

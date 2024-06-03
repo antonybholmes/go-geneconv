@@ -103,12 +103,12 @@ with open("data/modules/geneconv/mouse.sql", "w") as f:
             if alias in widthdrawn_alt_names:
                 aliases.update(widthdrawn_alt_names[alias])
 
-        symbol = ",".join(sorted(genes[mgi]["symbol"])).replace("'", "")
-        aliases = ",".join(sorted(aliases)).replace("'", "")
+        symbol = "|".join(sorted(genes[mgi]["symbol"])).replace("'", "")
+        aliases = "|".join(sorted(aliases)).replace("'", "")
 
-        entrez = ",".join(sorted(genes[mgi]["entrez"])).replace("'", "")
-        refseq = ",".join(sorted(genes[mgi]["refseq"])).replace("'", "")
-        ensembl = ",".join(sorted(genes[mgi]["ensembl"])).replace("'", "")
+        entrez = "|".join(sorted(genes[mgi]["entrez"])).replace("'", "")
+        refseq = "|".join(sorted(genes[mgi]["refseq"])).replace("'", "")
+        ensembl = "|".join(sorted(genes[mgi]["ensembl"])).replace("'", "")
 
         print(
             f"INSERT INTO mouse (gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{mgi}', '{symbol}', '{aliases}', '{entrez}', '{refseq}', '{ensembl}');",

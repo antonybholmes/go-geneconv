@@ -1,30 +1,30 @@
-package genecondb
+package geneconvdb
 
 import (
 	"sync"
 
-	genecon "github.com/antonybholmes/go-gene-conversion"
+	geneconv "github.com/antonybholmes/go-gene-conversion"
 )
 
-var instance *genecon.GeneConDB
+var instance *geneconv.GeneConDB
 var once sync.Once
 
-func InitCache(dir string) *genecon.GeneConDB {
+func InitCache(dir string) *geneconv.GeneConDB {
 	once.Do(func() {
-		instance = genecon.NewGeneConDB(dir)
+		instance = geneconv.NewGeneConDB(dir)
 	})
 
 	return instance
 }
 
-func GetInstance() *genecon.GeneConDB {
+func GetInstance() *geneconv.GeneConDB {
 	return instance
 }
 
-func Convert(name string, species string) (*genecon.Conversion, error) {
+func Convert(name string, species string) (*geneconv.Conversion, error) {
 	return instance.Convert(name, species)
 }
 
-func Gene(name string, species string) (*genecon.Gene, error) {
+func Gene(name string, species string) (*geneconv.Gene, error) {
 	return instance.Gene(name, species)
 }

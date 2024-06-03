@@ -1,4 +1,4 @@
-package genecon
+package geneconv
 
 import (
 	"database/sql"

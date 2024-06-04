@@ -47,9 +47,6 @@ const MOUSE_TAXONOMY_ID = 10090
 const HUMAN_SPECIES = "human"
 const MOUSE_SPECIES = "mouse"
 
-const STATUS_FOUND = "found"
-const STATUS_NOT_FOUND = "not found"
-
 type Taxonomy struct {
 	Id      uint64 `json:"id"`
 	Species string `json:"species"`
@@ -115,7 +112,7 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 	var ret Conversion
 
 	ret.Search = search
-	ret.Genes = make([]Gene, 0)
+	ret.Genes = make([]Gene, 0, 5)
 
 	fromSpecies = strings.ToLower(fromSpecies)
 
@@ -127,7 +124,6 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 			sql = HUMAN_TO_MOUSE_SQL
 		}
 	} else {
-
 		if exact {
 			sql = MOUSE_TO_HUMAN_EXACT_SQL
 		} else {
@@ -171,7 +167,7 @@ func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool
 
 	species = strings.ToLower(species)
 
-	var ret = make([]Gene, 0)
+	var ret = make([]Gene, 0, 5)
 
 	if species == HUMAN_SPECIES {
 		if exact {
@@ -200,6 +196,7 @@ func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool
 	defer rows.Close()
 
 	var tax Taxonomy
+
 	if species == HUMAN_SPECIES {
 		tax = HUMAN_TAX
 	} else {
@@ -215,7 +212,7 @@ func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]Gene, error) {
 	var refseq string
 	var ensembl string
 
-	var ret = make([]Gene, 0)
+	var ret = make([]Gene, 0, 5)
 
 	for rows.Next() {
 		var gene Gene

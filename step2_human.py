@@ -57,12 +57,12 @@ with open("data/modules/geneconv/human.sql", "w") as f:
         symbol = "|".join(sorted(genes[hgi]["symbol"])).replace("'", "")
         aliases = "|".join(sorted(aliases)).replace("'", "")
 
-        entrez = "|".join(sorted(genes[hgi]["entrez"])).replace("'", "")
+        entrez = list(sorted(genes[hgi]["entrez"]))[0] if len(genes[hgi]["entrez"]) > 0 else -1 #"|".join(sorted(genes[hgi]["entrez"])).replace("'", "")
         refseq = "|".join(sorted(genes[hgi]["refseq"])).replace("'", "")
         ensembl = "|".join(sorted(genes[hgi]["ensembl"])).replace("'", "")
 
         print(
-            f"INSERT INTO human (gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{hgi}', '{symbol}', '{aliases}', '{entrez}', '{refseq}', '{ensembl}');",
+            f"INSERT INTO human (gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{hgi}', '{symbol}', '{aliases}', {entrez}, '{refseq}', '{ensembl}');",
             file=f,
         )
 

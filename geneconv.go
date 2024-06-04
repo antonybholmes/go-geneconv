@@ -3,7 +3,6 @@ package geneconv
 import (
 	"database/sql"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/antonybholmes/go-sys"
@@ -71,7 +70,7 @@ type Gene struct {
 	BaseGene
 	Symbol  string   `json:"symbol"`
 	Aliases []string `json:"aliases"`
-	Entrez  []uint64 `json:"entrez"`
+	Entrez  int      `json:"entrez"`
 	RefSeq  []string `json:"refseq"`
 	Ensembl []string `json:"ensembl"`
 }
@@ -208,7 +207,7 @@ func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool
 
 func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]Gene, error) {
 	var aliases string
-	var entrez string
+	//var entrez string
 	var refseq string
 	var ensembl string
 
@@ -216,32 +215,32 @@ func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]Gene, error) {
 
 	for rows.Next() {
 		var gene Gene
-
+		gene.Entrez = -1
 		gene.Taxonomy = tax
 
 		err := rows.Scan(&gene.Id,
 			&gene.Symbol,
 			&aliases,
-			&entrez,
+			&gene.Entrez,
 			&refseq,
 			&ensembl)
 
-		if err != nil {
-			return ret, nil //fmt.Errorf("there was an error with the database query")
+		// keep going even if there is a failure
+		if err == nil {
+			// convert entrez to numbers
+			// for _, e := range strings.Split(entrez, ",") {
+			// 	n, err := strconv.ParseUint(e, 10, 64)
+
+			// 	if err == nil {
+			// 		gene.Entrez = append(gene.Entrez, n)
+			// 	}
+			// }
+
+			gene.Aliases = strings.Split(aliases, "|")
+			gene.RefSeq = strings.Split(refseq, "|")
+			gene.Ensembl = strings.Split(ensembl, "|")
 		}
 
-		// convert entrez to numbers
-		for _, e := range strings.Split(entrez, ",") {
-			n, err := strconv.ParseUint(e, 10, 64)
-
-			if err == nil {
-				gene.Entrez = append(gene.Entrez, n)
-			}
-		}
-
-		gene.Aliases = strings.Split(aliases, "|")
-		gene.RefSeq = strings.Split(refseq, "|")
-		gene.Ensembl = strings.Split(ensembl, "|")
 		ret = append(ret, gene)
 	}
 

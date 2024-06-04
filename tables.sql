@@ -8,8 +8,8 @@ CREATE TABLE conversion (
     mouse_gene_id TEXT NOT NULL,
     human_gene_symbol TEXT NOT NULL, 
     mouse_gene_symbol TEXT NOT NULL,
-    human_entrez INTEGER NOT NULL, 
-    mouse_entrez INTEGER NOT NULL,
+    human_entrez INTEGER NOT NULL DEFAULT -1, 
+    mouse_entrez INTEGER NOT NULL DEFAULT -1,
     UNIQUE(human_gene_id, mouse_gene_id));
 CREATE INDEX conversion_human_gene_id_idx ON conversion (human_gene_id);
 CREATE INDEX conversion_mouse_gene_id_idx ON conversion (mouse_gene_id);
@@ -27,7 +27,7 @@ CREATE TABLE human (
     gene_id TEXT NOT NULL,
     gene_symbol TEXT NOT NULL, 
     aliases TEXT NOT NULL,
-    entrez TEXT NOT NULL, 
+    entrez INTEGER NOT NULL DEFAULT -1, 
     refseq TEXT NOT NULL,
     ensembl TEXT NOT NULL,
     UNIQUE(gene_id));
@@ -51,7 +51,7 @@ CREATE TABLE mouse (
     gene_id TEXT NOT NULL,
     gene_symbol TEXT NOT NULL, 
     aliases TEXT NOT NULL,
-    entrez TEXT NOT NULL, 
+    entrez INTEGER NOT NULL DEFAULT -1, 
     refseq TEXT NOT NULL,
     ensembl TEXT NOT NULL,
     UNIQUE(gene_id));

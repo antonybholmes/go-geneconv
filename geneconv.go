@@ -115,24 +115,32 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 
 	fromSpecies = strings.ToLower(fromSpecies)
 
-	if fromSpecies == HUMAN_SPECIES {
+	var tax Taxonomy
 
-		if exact {
-			sql = HUMAN_TO_MOUSE_EXACT_SQL
-		} else {
-			sql = HUMAN_TO_MOUSE_SQL
-		}
-	} else {
+	if fromSpecies == MOUSE_SPECIES {
 		if exact {
 			sql = MOUSE_TO_HUMAN_EXACT_SQL
 		} else {
 			sql = MOUSE_TO_HUMAN_SQL
 		}
+
+		tax = HUMAN_TAX
+	} else {
+		// default to assuming human to mouse if poorly specified
+		if exact {
+			sql = HUMAN_TO_MOUSE_EXACT_SQL
+		} else {
+			sql = HUMAN_TO_MOUSE_SQL
+		}
+
+		tax = MOUSE_TAX
 	}
 
 	if !exact {
 		search = fmt.Sprintf("%%%s%%", search)
 	}
+
+	//log.Debug().Msgf("%s", sql)
 
 	rows, err := geneconvdb.db.Query(sql, search)
 
@@ -141,13 +149,6 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 	}
 
 	defer rows.Close()
-
-	var tax Taxonomy
-	if fromSpecies == HUMAN_SPECIES {
-		tax = MOUSE_TAX
-	} else {
-		tax = HUMAN_TAX
-	}
 
 	genes, err := rowsToGenes(rows, tax)
 
@@ -168,18 +169,24 @@ func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool
 
 	var ret = make([]Gene, 0, 5)
 
-	if species == HUMAN_SPECIES {
-		if exact {
-			sql = HUMAN_EXACT_SQL
-		} else {
-			sql = HUMAN_SQL
-		}
-	} else {
+	var tax Taxonomy
+
+	if species == MOUSE_SPECIES {
 		if exact {
 			sql = MOUSE_EXACT_SQL
 		} else {
 			sql = MOUSE_SQL
 		}
+
+		tax = MOUSE_TAX
+	} else {
+		if exact {
+			sql = HUMAN_EXACT_SQL
+		} else {
+			sql = HUMAN_SQL
+		}
+
+		tax = HUMAN_TAX
 	}
 
 	if !exact {
@@ -193,14 +200,6 @@ func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool
 	}
 
 	defer rows.Close()
-
-	var tax Taxonomy
-
-	if species == HUMAN_SPECIES {
-		tax = HUMAN_TAX
-	} else {
-		tax = MOUSE_TAX
-	}
 
 	return rowsToGenes(rows, tax)
 }

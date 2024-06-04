@@ -12,7 +12,7 @@ const MOUSE_TO_HUMAN_EXACT_SQL = `SELECT human.gene_id, human.gene_symbol, human
 	FROM mouse_terms, conversion, human
  	WHERE LOWER(mouse_terms.term) = LOWER(?1) AND conversion.mouse_gene_id = mouse_terms.gene_id AND human.gene_id = conversion.human_gene_id`
 
-const HUMAN_TO_MOUSE_EXACT_SQL = `SELECT mouse.gene_id, mouse.gene_id, mouse.gene_symbol, mouse.aliases, mouse.entrez, mouse.refseq, mouse.ensembl
+const HUMAN_TO_MOUSE_EXACT_SQL = `SELECT mouse.gene_id, mouse.gene_symbol, mouse.aliases, mouse.entrez, mouse.refseq, mouse.ensembl
 	FROM human_terms, conversion, mouse
 	WHERE LOWER(human_terms.term) = LOWER(?1) AND conversion.human_gene_id = human_terms.gene_id AND mouse.gene_id = conversion.mouse_gene_id`
 
@@ -20,7 +20,7 @@ const MOUSE_TO_HUMAN_SQL = `SELECT human.gene_id, human.gene_symbol, human.alias
 	FROM mouse_terms, conversion, human
  	WHERE mouse_terms.term LIKE ?1 AND conversion.mouse_gene_id = mouse_terms.gene_id AND human.gene_id = conversion.human_gene_id`
 
-const HUMAN_TO_MOUSE_SQL = `SELECT mouse.gene_id, mouse.gene_id, mouse.gene_symbol, mouse.aliases, mouse.entrez, mouse.refseq, mouse.ensembl
+const HUMAN_TO_MOUSE_SQL = `SELECT mouse.gene_id, mouse.gene_symbol, mouse.aliases, mouse.entrez, mouse.refseq, mouse.ensembl
 	FROM human_terms, conversion, mouse
 	WHERE human_terms.term LIKE ?1 AND conversion.human_gene_id = human_terms.gene_id AND mouse.gene_id = conversion.mouse_gene_id`
 
@@ -223,6 +223,8 @@ func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]Gene, error) {
 			&gene.Entrez,
 			&refseq,
 			&ensembl)
+
+		//log.Debug().Msgf("err %s", err)
 
 		// keep going even if there is a failure
 		if err == nil {

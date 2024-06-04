@@ -17,16 +17,19 @@ df = pd.read_csv(
 
 for i in range(df.shape[0]):
     mgi = df.index.values[i]
-    entrez = df.iloc[i,7] #df["6. Entrez gene id"].values[i]
+    entrez = df.iloc[i, 7]  # df["6. Entrez gene id"].values[i]
+    type = df.iloc[i, 5]
 
-    #print(mgi, entrez, type(entrez))
-         
+    if type != "Gene":
+        continue
+    
+    # print(mgi, entrez, type(entrez))
+
     try:
-        genes[mgi]["entrez"].add(int(entrez))
+        entrez = int(entrez)
+        genes[mgi]["entrez"].add(entrez)
     except:
-        pass #genes[mgi]["entrez"].add(-1)
-
- 
+        pass  # genes[mgi]["entrez"].add(-1)
 
 
 df = pd.read_csv(
@@ -111,17 +114,19 @@ with open("data/modules/geneconv/mouse.sql", "w") as f:
         symbol = "|".join(sorted(genes[mgi]["symbol"])).replace("'", "")
         aliases = "|".join(sorted(aliases)).replace("'", "")
 
-        entrez = list(sorted(genes[mgi]["entrez"]))[0] if len(genes[mgi]["entrez"]) > 0 else -1 #"|".join(sorted(genes[mgi]["entrez"])).replace("'", "")
+        entrez = (
+            list(sorted(genes[mgi]["entrez"]))[0]
+            if len(genes[mgi]["entrez"]) > 0
+            else -1
+        )  # "|".join(sorted(genes[mgi]["entrez"])).replace("'", "")
         refseq = "|".join(sorted(genes[mgi]["refseq"])).replace("'", "")
         ensembl = "|".join(sorted(genes[mgi]["ensembl"])).replace("'", "")
 
- 
         print(
             f"INSERT INTO mouse (gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{mgi}', '{symbol}', '{aliases}', {entrez}, '{refseq}', '{ensembl}');",
             file=f,
         )
 
-        
 
 with open("data/modules/geneconv/mouse_terms.sql", "w") as f:
     for mgi in sorted(genes):

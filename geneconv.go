@@ -76,20 +76,20 @@ type Gene struct {
 }
 
 type Conversion struct {
-	Search string `json:"id"`
-	Genes  []Gene `json:"genes"`
+	Search string  `json:"id"`
+	Genes  []*Gene `json:"genes"`
 }
 
 type ConversionResults struct {
-	From        Taxonomy     `json:"from"`
-	To          Taxonomy     `json:"to"`
-	Conversions []Conversion `json:"conversions"`
+	From        Taxonomy  `json:"from"`
+	To          Taxonomy  `json:"to"`
+	Conversions [][]*Gene `json:"conversions"`
 }
 
-type GeneResult struct {
-	Id    string `json:"id"`
-	Genes []Gene `json:"genes"`
-}
+// type GeneResult struct {
+// 	Id    string `json:"id"`
+// 	Genes []Gene `json:"genes"`
+// }
 
 type GeneConvDB struct {
 	db *sql.DB
@@ -105,15 +105,16 @@ func (geneconvdb *GeneConvDB) Close() {
 	geneconvdb.db.Close()
 }
 
-func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpecies string, exact bool) (Conversion, error) {
+func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpecies string, exact bool) ([]*Gene, error) {
 	var sql string
 
-	var ret Conversion
+	//var ret Conversion
 
-	ret.Search = search
-	ret.Genes = make([]Gene, 0, 5)
+	//ret.Search = search
+	ret := make([]*Gene, 0, 5)
 
 	fromSpecies = strings.ToLower(fromSpecies)
+	//toSpecies = strings.ToLower(toSpecies)
 
 	var tax Taxonomy
 
@@ -156,18 +157,18 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 		return ret, err
 	}
 
-	ret.Genes = append(ret.Genes, genes...)
+	ret = append(ret, genes...)
 
 	return ret, nil
 }
 
-func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool) ([]Gene, error) {
+func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool) ([]*Gene, error) {
 
 	var sql string
 
 	species = strings.ToLower(species)
 
-	var ret = make([]Gene, 0, 5)
+	var ret = make([]*Gene, 0, 5)
 
 	var tax Taxonomy
 
@@ -204,13 +205,13 @@ func (geneconvdb *GeneConvDB) GeneInfo(search string, species string, exact bool
 	return rowsToGenes(rows, tax)
 }
 
-func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]Gene, error) {
+func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]*Gene, error) {
 	var aliases string
 	//var entrez string
 	var refseq string
 	var ensembl string
 
-	var ret = make([]Gene, 0, 5)
+	var ret = make([]*Gene, 0, 5)
 
 	for rows.Next() {
 		var gene Gene
@@ -242,7 +243,7 @@ func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]Gene, error) {
 			gene.Ensembl = strings.Split(ensembl, "|")
 		}
 
-		ret = append(ret, gene)
+		ret = append(ret, &gene)
 	}
 
 	return ret, nil

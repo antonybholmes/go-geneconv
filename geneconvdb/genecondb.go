@@ -9,9 +9,9 @@ import (
 var instance *geneconv.GeneConvDB
 var once sync.Once
 
-func InitCache(dir string) *geneconv.GeneConvDB {
+func InitCache(file string) *geneconv.GeneConvDB {
 	once.Do(func() {
-		instance = geneconv.NewGeneConvDB(dir)
+		instance = geneconv.NewGeneConvDB(file)
 	})
 
 	return instance

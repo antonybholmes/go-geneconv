@@ -1,4 +1,4 @@
-module github.com/antonybholmes/go-gene-conversion
+module github.com/antonybholmes/go-gene-conv
 
 go 1.22.2
 

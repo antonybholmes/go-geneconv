@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/antonybholmes/go-sys"
+	"github.com/rs/zerolog/log"
 )
 
 // const MOUSE_TO_HUMAN_EXACT_SQL = `SELECT human.gene_id, human.gene_symbol, human.aliases, human.entrez, human.refseq, human.ensembl
@@ -76,18 +77,19 @@ var MOUSE_TAX = Taxonomy{
 	Species: MOUSE_SPECIES,
 }
 
-type BaseGene struct {
-	Taxonomy Taxonomy `json:"taxonomy"`
-	Id       string   `json:"id"`
-}
+// type BaseGene struct {
+// 	Taxonomy Taxonomy `json:"taxonomy"`
+// 	Id       string   `json:"id"`
+// }
 
 type Gene struct {
-	BaseGene
+	Db      string   `json:"db"`
 	Symbol  string   `json:"symbol"`
-	Aliases []string `json:"aliases"`
-	Entrez  int      `json:"entrez"`
+	Aliases []string `json:"-"`
+	Entrez  string   `json:"entrez"`
 	//RefSeq  []string `json:"refseq"`
-	Ensembl []string `json:"ensembl"`
+	Ensembl string `json:"ensembl"`
+	//Taxonomy Taxonomy `json:"taxonomy"`
 }
 
 type Conversion struct {
@@ -131,11 +133,11 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 	fromSpecies = strings.ToLower(fromSpecies)
 	toSpecies = strings.ToLower(toSpecies)
 
-	if exact {
-		search = search + ","
+	if !exact {
+		search = search + "*"
 	}
 
-	var tax Taxonomy
+	//var tax Taxonomy
 
 	if fromSpecies == HUMAN_SPECIES {
 		if toSpecies == MOUSE_SPECIES {
@@ -144,7 +146,7 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 			sql = HUMAN_TO_HUMAN_SQL
 		}
 
-		tax = HUMAN_TAX
+		//tax = MOUSE_TAX
 	} else {
 		if toSpecies == HUMAN_SPECIES {
 			sql = MOUSE_TO_HUMAN_SQL
@@ -152,24 +154,23 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 			sql = MOUSE_TO_MOUSE_SQL
 		}
 
-		tax = MOUSE_TAX
+		//tax = HUMAN_TAX
 	}
 
 	// if !exact {
 	// 	search = fmt.Sprintf("%%%s%%", search)
 	// }
 
-	//log.Debug().Msgf("%s", sql)
+	//log.Debug().Msgf("%s %s", sql, search)
 
 	rows, err := geneconvdb.db.Query(sql, search)
 
 	if err != nil {
+		log.Debug().Msgf("%s", err)
 		return ret, err
 	}
 
-	defer rows.Close()
-
-	genes, err := rowsToGenes(rows, tax)
+	genes, err := rowsToGenes(rows)
 
 	if err != nil {
 		return ret, err
@@ -223,7 +224,11 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 // 	return rowsToGenes(rows, tax)
 // }
 
-func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]*Gene, error) {
+func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
+	defer rows.Close()
+
+	//log.Debug().Msgf("row to gene")
+
 	var aliases string
 	//var entrez string
 	//var refseq string
@@ -234,9 +239,10 @@ func rowsToGenes(rows *sql.Rows, tax Taxonomy) ([]*Gene, error) {
 	for rows.Next() {
 		var gene Gene
 
-		gene.Taxonomy = tax
+		//gene.Taxonomy = tax
 
 		err := rows.Scan(
+			&gene.Db,
 			&gene.Symbol,
 			&gene.Entrez,
 			&gene.Ensembl,

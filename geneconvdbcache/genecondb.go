@@ -1,4 +1,4 @@
-package geneconvdb
+package geneconvdbcache
 
 import (
 	"sync"

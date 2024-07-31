@@ -3,7 +3,7 @@ package geneconvdbcache
 import (
 	"sync"
 
-	geneconv "github.com/antonybholmes/go-gene-conv"
+	geneconv "github.com/antonybholmes/go-geneconv"
 )
 
 var instance *geneconv.GeneConvDB

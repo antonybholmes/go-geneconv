@@ -1,1 +1,1 @@
-# go-gene-conv
+# go-geneconv

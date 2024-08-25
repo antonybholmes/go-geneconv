@@ -63,8 +63,8 @@ const HUMAN_SPECIES = "human"
 const MOUSE_SPECIES = "mouse"
 
 type Taxonomy struct {
-	Id      uint64 `json:"id"`
 	Species string `json:"species"`
+	Id      uint64 `json:"id"`
 }
 
 var HUMAN_TAX = Taxonomy{
@@ -85,11 +85,9 @@ var MOUSE_TAX = Taxonomy{
 type Gene struct {
 	Db      string   `json:"db"`
 	Symbol  string   `json:"symbol"`
-	Aliases []string `json:"-"`
 	Entrez  string   `json:"entrez"`
-	//RefSeq  []string `json:"refseq"`
-	Ensembl string `json:"ensembl"`
-	//Taxonomy Taxonomy `json:"taxonomy"`
+	Ensembl string   `json:"ensembl"`
+	Aliases []string `json:"-"`
 }
 
 type Conversion struct {

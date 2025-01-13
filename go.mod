@@ -5,7 +5,7 @@ go 1.23
 replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
-	github.com/antonybholmes/go-sys v0.0.0-20250108011046-3565a1fbce78
+	github.com/antonybholmes/go-sys v0.0.0-20250110222450-c5aa7b14c79a
 	github.com/rs/zerolog v1.33.0
 )
 
@@ -17,7 +17,7 @@ require (
 	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/xuri/efp v0.0.0-20241211021726-c4e992084aa6 // indirect
 	github.com/xuri/excelize/v2 v2.9.0 // indirect
-	github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7 // indirect
+	github.com/xuri/nfp v0.0.0-20250111060730-82a408b9aa71 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect

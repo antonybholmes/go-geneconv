@@ -8,7 +8,7 @@ replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
 	github.com/antonybholmes/go-sys v0.0.0-20250307171544-adff7a5ac327
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 )
 
 require (

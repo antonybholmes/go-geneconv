@@ -7,7 +7,7 @@ toolchain go1.24.0
 replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
-	github.com/antonybholmes/go-sys v0.0.0-20250530200903-de9311aa2093
+	github.com/antonybholmes/go-sys v0.0.0-20250606171605-31639110750b
 	github.com/rs/zerolog v1.34.0
 )
 

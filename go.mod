@@ -5,7 +5,7 @@ go 1.25
 replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
-	github.com/antonybholmes/go-sys v0.0.0-20251003150644-1088538d5aea
+	github.com/antonybholmes/go-sys v0.0.0-20251008222328-ea54acd3095b
 	github.com/rs/zerolog v1.34.0
 )
 

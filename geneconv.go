@@ -40,42 +40,46 @@ import (
 // 	FROM human_terms, human
 // 	WHERE LOWER(human_terms.term) = LOWER(?1) AND human.gene_id = human_terms.gene_id`
 
-const HUMAN_TO_MOUSE_SQL = `SELECT mouse.db, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
+const (
+	HumanToMouseSql = `SELECT mouse.db, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
  	FROM mouse
    	WHERE mouse.human_tags MATCH ?1 ORDER BY rank, mouse.gene_symbol`
 
-const HUMAN_TO_HUMAN_SQL = `SELECT human.db, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
+	HumanToHumanSql = `SELECT human.db, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
 	FROM human
 	WHERE human.human_tags MATCH ?1 ORDER BY rank, human.gene_symbol`
 
-const MOUSE_TO_HUMAN_SQL = `SELECT human.db, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
+	MouseToHumanSql = `SELECT human.db, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
 	FROM human
 	WHERE human.mouse_tags MATCH ?1 ORDER BY rank, human.gene_symbol`
 
-const MOUSE_TO_MOUSE_SQL = `SELECT mouse.db, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
+	MouseToMouseSql = `SELECT mouse.db, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
 	FROM mouse
 	WHERE mouse.mouse_tags MATCH ?1 ORDER BY rank, mouse.gene_symbol`
 
-const HUMAN_TAXONOMY_ID = 9606
-const MOUSE_TAXONOMY_ID = 10090
+	TaxonomyHumanId = 9606
+	TaxonomyMouseId = 10090
 
-const HUMAN_SPECIES = "human"
-const MOUSE_SPECIES = "mouse"
+	SpeciesHuman = "human"
+	SpeciesMouse = "mouse"
+)
 
 type Taxonomy struct {
 	Species string `json:"species"`
 	Id      uint64 `json:"id"`
 }
 
-var HUMAN_TAX = Taxonomy{
-	Id:      HUMAN_TAXONOMY_ID,
-	Species: HUMAN_SPECIES,
-}
+var (
+	HUMAN_TAX = Taxonomy{
+		Id:      TaxonomyHumanId,
+		Species: SpeciesHuman,
+	}
 
-var MOUSE_TAX = Taxonomy{
-	Id:      MOUSE_TAXONOMY_ID,
-	Species: MOUSE_SPECIES,
-}
+	MOUSE_TAX = Taxonomy{
+		Id:      TaxonomyMouseId,
+		Species: SpeciesMouse,
+	}
+)
 
 // type BaseGene struct {
 // 	Taxonomy Taxonomy `json:"taxonomy"`
@@ -137,19 +141,19 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 
 	//var tax Taxonomy
 
-	if fromSpecies == HUMAN_SPECIES {
-		if toSpecies == MOUSE_SPECIES {
-			sql = HUMAN_TO_MOUSE_SQL
+	if fromSpecies == SpeciesHuman {
+		if toSpecies == SpeciesMouse {
+			sql = HumanToMouseSql
 		} else {
-			sql = HUMAN_TO_HUMAN_SQL
+			sql = HumanToHumanSql
 		}
 
 		//tax = MOUSE_TAX
 	} else {
-		if toSpecies == HUMAN_SPECIES {
-			sql = MOUSE_TO_HUMAN_SQL
+		if toSpecies == SpeciesHuman {
+			sql = MouseToHumanSql
 		} else {
-			sql = MOUSE_TO_MOUSE_SQL
+			sql = MouseToMouseSql
 		}
 
 		//tax = HUMAN_TAX

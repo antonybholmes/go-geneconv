@@ -91,7 +91,7 @@ type Gene struct {
 	Symbol  string   `json:"symbol"`
 	Entrez  string   `json:"entrez"`
 	Ensembl string   `json:"ensembl"`
-	Aliases []string `json:"-"`
+	Aliases []string `json:"aliases"`
 }
 
 type Conversion struct {
@@ -263,7 +263,7 @@ func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
 			// 	}
 			// }
 
-			gene.Aliases = strings.Split(aliases, ",")
+			gene.Aliases = strings.Split(aliases, "|")
 			//gene.RefSeq = strings.Split(refseq, "|")
 			//gene.Ensembl = strings.Split(ensembl, "|")
 		}

@@ -5,10 +5,12 @@ import pandas as pd
 import os
 import gzip
 
+from uuid_utils import uuid7
+
 genes = collections.defaultdict(lambda: collections.defaultdict(set))
 
 df = pd.read_csv(
-    "data/modules/geneconv/MGI_EntrezGene.rpt",
+    "data/modules/geneconv/MGI_EntrezGene_20240531.rpt",
     sep="\t",
     header=0,
     keep_default_na=False,
@@ -22,7 +24,7 @@ for i in range(df.shape[0]):
 
     if type != "Gene":
         continue
-    
+
     # print(mgi, entrez, type(entrez))
 
     try:
@@ -50,13 +52,13 @@ for i in range(df.shape[0]):
 
 tables = [
     pd.read_csv(
-        "data/modules/geneconv/MRK_List1.rpt",
+        "data/modules/geneconv/MRK_List1.rpt.gz",
         sep="\t",
         header=0,
         keep_default_na=False,
     ),
     pd.read_csv(
-        "data/modules/geneconv/MRK_List2.rpt",
+        "data/modules/geneconv/MRK_List2.rpt.gz",
         sep="\t",
         header=0,
         keep_default_na=False,
@@ -122,36 +124,42 @@ with open("data/modules/geneconv/mouse.sql", "w") as f:
         refseq = "|".join(sorted(genes[mgi]["refseq"])).replace("'", "")
         ensembl = "|".join(sorted(genes[mgi]["ensembl"])).replace("'", "")
 
+        id = uuid7()
+
         print(
-            f"INSERT INTO mouse (gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{mgi}', '{symbol}', '{aliases}', {entrez}, '{refseq}', '{ensembl}');",
+            f"INSERT INTO mouse (id, gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{id}', '{mgi}', '{symbol}', '{aliases}', {entrez}, '{refseq}', '{ensembl}');",
             file=f,
         )
 
 
 with open("data/modules/geneconv/mouse_terms.sql", "w") as f:
     for mgi in sorted(genes):
-        for id in genes[mgi]["aliases"]:
-            id = id.replace("'", "''")
+        for term in genes[mgi]["aliases"]:
+            id = uuid7()
+            term = term.replace("'", "''")
 
             print(
-                f"INSERT INTO mouse_terms (gene_id, term) VALUES ('{mgi}', '{id}');",
+                f"INSERT INTO mouse_terms (id, gene_id, term) VALUES ('{id}', '{mgi}', '{term}');",
                 file=f,
             )
 
-        for id in genes[mgi]["entrez"]:
+        for term in genes[mgi]["entrez"]:
+            id = uuid7()
             print(
-                f"INSERT INTO mouse_terms (gene_id, term) VALUES ('{mgi}', '{id}');",
+                f"INSERT INTO mouse_terms (id, gene_id, term) VALUES ('{id}', '{mgi}', '{term}');",
                 file=f,
             )
 
-        for id in genes[mgi]["refseq"]:
+        for term in genes[mgi]["refseq"]:
+            id = uuid7()
             print(
-                f"INSERT INTO mouse_terms (gene_id, term) VALUES ('{mgi}', '{id}');",
+                f"INSERT INTO mouse_terms (id, gene_id, term) VALUES ('{id}', '{mgi}', '{term}');",
                 file=f,
             )
 
-        for id in genes[mgi]["ensembl"]:
+        for term in genes[mgi]["ensembl"]:
+            id = uuid7()
             print(
-                f"INSERT INTO mouse_terms (gene_id, term) VALUES ('{mgi}', '{id}');",
+                f"INSERT INTO mouse_terms (id, gene_id, term) VALUES ('{id}', '{mgi}', '{term}');",
                 file=f,
             )

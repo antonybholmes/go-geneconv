@@ -3,7 +3,7 @@ PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS conversion;
 CREATE TABLE conversion (
-    id INTEGER PRIMARY KEY ASC, 
+    id TEXT PRIMARY KEY ASC, 
     human_gene_id TEXT NOT NULL, 
     mouse_gene_id TEXT NOT NULL,
     human_gene_symbol TEXT NOT NULL, 
@@ -16,14 +16,14 @@ CREATE INDEX conversion_mouse_gene_id_idx ON conversion (mouse_gene_id);
 
 DROP TABLE IF EXISTS human_terms;
 CREATE TABLE human_terms (
-    id INTEGER PRIMARY KEY ASC, 
+    id TEXT PRIMARY KEY ASC, 
     gene_id TEXT NOT NULL,
     term TEXT NOT NULL);
 CREATE INDEX human_terms_term_idx ON human_terms (term);
  
 DROP TABLE IF EXISTS human;
 CREATE TABLE human (
-    id INTEGER PRIMARY KEY ASC, 
+    id TEXT PRIMARY KEY ASC, 
     gene_id TEXT NOT NULL,
     gene_symbol TEXT NOT NULL, 
     aliases TEXT NOT NULL,
@@ -39,7 +39,7 @@ CREATE INDEX human_ensembl_idx ON human (ensembl);
 
 DROP TABLE IF EXISTS mouse_terms;
 CREATE TABLE mouse_terms (
-    id INTEGER PRIMARY KEY ASC, 
+    id TEXT PRIMARY KEY ASC, 
     gene_id TEXT NOT NULL,
     term TEXT NOT NULL);
 CREATE INDEX mouse_terms_term_idx ON mouse_terms (term);
@@ -47,7 +47,7 @@ CREATE INDEX mouse_terms_term_idx ON mouse_terms (term);
 
 DROP TABLE IF EXISTS mouse;
 CREATE TABLE mouse (
-    id INTEGER PRIMARY KEY ASC, 
+    id TEXT PRIMARY KEY ASC, 
     gene_id TEXT NOT NULL,
     gene_symbol TEXT NOT NULL, 
     aliases TEXT NOT NULL,

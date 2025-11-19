@@ -1,5 +1,6 @@
 import collections
 import re
+from uuid_utils import uuid7
 import numpy as np
 import pandas as pd
 import os
@@ -57,39 +58,56 @@ with open("data/modules/geneconv/human.sql", "w") as f:
         symbol = "|".join(sorted(genes[hgi]["symbol"])).replace("'", "")
         aliases = "|".join(sorted(aliases)).replace("'", "")
 
-        entrez = list(sorted(genes[hgi]["entrez"]))[0] if len(genes[hgi]["entrez"]) > 0 else -1 #"|".join(sorted(genes[hgi]["entrez"])).replace("'", "")
+        entrez = (
+            list(sorted(genes[hgi]["entrez"]))[0]
+            if len(genes[hgi]["entrez"]) > 0
+            else -1
+        )  # "|".join(sorted(genes[hgi]["entrez"])).replace("'", "")
         refseq = "|".join(sorted(genes[hgi]["refseq"])).replace("'", "")
         ensembl = "|".join(sorted(genes[hgi]["ensembl"])).replace("'", "")
 
+        id = uuid7()
+
         print(
-            f"INSERT INTO human (gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{hgi}', '{symbol}', '{aliases}', {entrez}, '{refseq}', '{ensembl}');",
+            f"INSERT INTO human (id, gene_id, gene_symbol, aliases, entrez, refseq, ensembl) VALUES ('{id}', '{hgi}', '{symbol}', '{aliases}', {entrez}, '{refseq}', '{ensembl}');",
             file=f,
         )
 
 
 with open("data/modules/geneconv/human_terms.sql", "w") as f:
     for hgi in sorted(genes):
-        for id in genes[hgi]["aliases"]:
-            id = id.replace("'", "''")
+        for term in genes[hgi]["aliases"]:
+            id = uuid7()
+            term = term.replace("'", "''")
             print(
-                f"INSERT INTO human_terms (gene_id, term) VALUES ('{hgi}', '{id}');",
+                f"INSERT INTO human_terms (id, gene_id, term) VALUES ('{id}', '{hgi}', '{term}');",
                 file=f,
             )
 
-        for id in genes[hgi]["entrez"]:
+        for term in genes[hgi]["entrez"]:
+            id = uuid7()
             print(
-                f"INSERT INTO human_terms (gene_id, term) VALUES ('{hgi}', '{id}');",
+                f"INSERT INTO human_terms (id, gene_id, term) VALUES ('{id}', '{hgi}', '{term}');",
                 file=f,
             )
 
-        for id in genes[hgi]["refseq"]:
+        for term in genes[hgi]["entrez"]:
+            id = uuid7()
             print(
-                f"INSERT INTO human_terms (gene_id, term) VALUES ('{hgi}', '{id}');",
+                f"INSERT INTO human_terms (id, gene_id, term) VALUES ('{id}', '{hgi}', '{term}');",
                 file=f,
             )
 
-        for id in genes[hgi]["ensembl"]:
+        for term in genes[hgi]["refseq"]:
+            id = uuid7()
             print(
-                f"INSERT INTO human_terms (gene_id, term) VALUES ('{hgi}', '{id}');",
+                f"INSERT INTO human_terms (id, gene_id, term) VALUES ('{id}', '{hgi}', '{term}');",
+                file=f,
+            )
+
+        for term in genes[hgi]["ensembl"]:
+            id = uuid7()
+            print(
+                f"INSERT INTO human_terms (id, gene_id, term) VALUES ('{id}', '{hgi}', '{term}');",
                 file=f,
             )

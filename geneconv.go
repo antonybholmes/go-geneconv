@@ -41,19 +41,19 @@ import (
 // 	WHERE LOWER(human_terms.term) = LOWER(?1) AND human.gene_id = human_terms.gene_id`
 
 const (
-	HumanToMouseSql = `SELECT mouse.db, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
+	HumanToMouseSql = `SELECT mouse.id, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
  	FROM mouse
    	WHERE mouse.human_tags MATCH ?1 ORDER BY rank, mouse.gene_symbol`
 
-	HumanToHumanSql = `SELECT human.db, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
+	HumanToHumanSql = `SELECT human.id, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
 	FROM human
 	WHERE human.human_tags MATCH ?1 ORDER BY rank, human.gene_symbol`
 
-	MouseToHumanSql = `SELECT human.db, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
+	MouseToHumanSql = `SELECT human.id, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
 	FROM human
 	WHERE human.mouse_tags MATCH ?1 ORDER BY rank, human.gene_symbol`
 
-	MouseToMouseSql = `SELECT mouse.db, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
+	MouseToMouseSql = `SELECT mouse.id, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
 	FROM mouse
 	WHERE mouse.mouse_tags MATCH ?1 ORDER BY rank, mouse.gene_symbol`
 
@@ -66,7 +66,7 @@ const (
 
 type Taxonomy struct {
 	Species string `json:"species"`
-	Id      uint64 `json:"id"`
+	Id      uint   `json:"id"`
 }
 
 var (
@@ -87,7 +87,7 @@ var (
 // }
 
 type Gene struct {
-	Db      string   `json:"db"`
+	Id      string   `json:"id"`
 	Symbol  string   `json:"symbol"`
 	Entrez  string   `json:"entrez"`
 	Ensembl string   `json:"ensembl"`
@@ -244,7 +244,7 @@ func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
 		//gene.Taxonomy = tax
 
 		err := rows.Scan(
-			&gene.Db,
+			&gene.Id,
 			&gene.Symbol,
 			&gene.Entrez,
 			&gene.Ensembl,

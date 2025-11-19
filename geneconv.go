@@ -91,7 +91,7 @@ type Gene struct {
 	Symbol  string   `json:"symbol"`
 	Entrez  string   `json:"entrez"`
 	Ensembl string   `json:"ensembl"`
-	Aliases []string `json:"aliases"`
+	Aliases []string `json:"-"`
 }
 
 type Conversion struct {

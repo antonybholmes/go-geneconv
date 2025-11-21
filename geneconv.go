@@ -40,6 +40,46 @@ import (
 // 	FROM human_terms, human
 // 	WHERE LOWER(human_terms.term) = LOWER(?1) AND human.gene_id = human_terms.gene_id`
 
+type (
+	Taxonomy struct {
+		Species string `json:"species"`
+		Id      int    `json:"id"`
+	}
+
+	// type BaseGene struct {
+	// 	Taxonomy Taxonomy `json:"taxonomy"`
+	// 	Id       string   `json:"id"`
+	// }
+
+	Gene struct {
+		Id      string   `json:"id"`
+		Symbol  string   `json:"symbol"`
+		Entrez  string   `json:"entrez"`
+		Ensembl string   `json:"ensembl"`
+		Aliases []string `json:"-"`
+	}
+
+	Conversion struct {
+		Search string  `json:"id"`
+		Genes  []*Gene `json:"genes"`
+	}
+
+	ConversionResults struct {
+		From        Taxonomy  `json:"from"`
+		To          Taxonomy  `json:"to"`
+		Conversions [][]*Gene `json:"conversions"`
+	}
+
+	//  GeneResult struct {
+	// 	Id    string `json:"id"`
+	// 	Genes []Gene `json:"genes"`
+	// }
+
+	GeneConvDB struct {
+		db *sql.DB
+	}
+)
+
 const (
 	HumanToMouseSql = `SELECT mouse.id, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
  	FROM mouse
@@ -64,55 +104,17 @@ const (
 	SpeciesMouse = "mouse"
 )
 
-type Taxonomy struct {
-	Species string `json:"species"`
-	Id      int    `json:"id"`
-}
-
 var (
-	HUMAN_TAX = Taxonomy{
+	HumanTaxo = Taxonomy{
 		Id:      TaxonomyHumanId,
 		Species: SpeciesHuman,
 	}
 
-	MOUSE_TAX = Taxonomy{
+	MouseTaxo = Taxonomy{
 		Id:      TaxonomyMouseId,
 		Species: SpeciesMouse,
 	}
 )
-
-// type BaseGene struct {
-// 	Taxonomy Taxonomy `json:"taxonomy"`
-// 	Id       string   `json:"id"`
-// }
-
-type Gene struct {
-	Id      string   `json:"id"`
-	Symbol  string   `json:"symbol"`
-	Entrez  string   `json:"entrez"`
-	Ensembl string   `json:"ensembl"`
-	Aliases []string `json:"-"`
-}
-
-type Conversion struct {
-	Search string  `json:"id"`
-	Genes  []*Gene `json:"genes"`
-}
-
-type ConversionResults struct {
-	From        Taxonomy  `json:"from"`
-	To          Taxonomy  `json:"to"`
-	Conversions [][]*Gene `json:"conversions"`
-}
-
-// type GeneResult struct {
-// 	Id    string `json:"id"`
-// 	Genes []Gene `json:"genes"`
-// }
-
-type GeneConvDB struct {
-	db *sql.DB
-}
 
 func NewGeneConvDB(file string) *GeneConvDB {
 	db := sys.Must(sql.Open("sqlite3", file))

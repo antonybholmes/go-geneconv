@@ -66,7 +66,7 @@ const (
 
 type Taxonomy struct {
 	Species string `json:"species"`
-	Id      uint   `json:"id"`
+	Id      int    `json:"id"`
 }
 
 var (
@@ -256,7 +256,7 @@ func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
 		if err == nil {
 			// convert entrez to numbers
 			// for _, e := range strings.Split(entrez, ",") {
-			// 	n, err := strconv.ParseUint(e, 10, 64)
+			// 	n, err := strconv.Parseint(e, 10, 64)
 
 			// 	if err == nil {
 			// 		gene.Entrez = append(gene.Entrez, n)

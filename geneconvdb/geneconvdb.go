@@ -1,4 +1,4 @@
-package geneconvdbcache
+package geneconvdb
 
 import (
 	"sync"
@@ -9,7 +9,7 @@ import (
 var instance *geneconv.GeneConvDB
 var once sync.Once
 
-func InitCache(file string) *geneconv.GeneConvDB {
+func InitGeneConvDB(file string) *geneconv.GeneConvDB {
 	once.Do(func() {
 		instance = geneconv.NewGeneConvDB(file)
 	})

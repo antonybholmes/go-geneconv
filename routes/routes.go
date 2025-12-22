@@ -3,8 +3,8 @@ package routes
 import (
 	"strings"
 
-	geneconv "github.com/antonybholmes/go-geneconv"
-	geneconvdbcache "github.com/antonybholmes/go-geneconv/geneconvdbcache"
+	"github.com/antonybholmes/go-geneconv"
+	"github.com/antonybholmes/go-geneconv/geneconvdb"
 	"github.com/antonybholmes/go-web"
 	"github.com/gin-gonic/gin"
 )
@@ -86,7 +86,7 @@ func ConvertRoute(c *gin.Context) {
 	for _, search := range params.Searches {
 
 		// Don't care about the errors, just plug empty list into failures
-		conversion, _ := geneconvdbcache.Convert(search,
+		conversion, _ := geneconvdb.Convert(search,
 			fromSpecies,
 			toSpecies,
 			params.Exact)

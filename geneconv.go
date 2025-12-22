@@ -117,13 +117,12 @@ var (
 )
 
 func NewGeneConvDB(file string) *GeneConvDB {
-	db := sys.Must(sql.Open("sqlite3", file))
 
-	return &GeneConvDB{db}
+	return &GeneConvDB{db: sys.Must(sql.Open("sqlite3", file))}
 }
 
-func (geneconvdb *GeneConvDB) Close() {
-	geneconvdb.db.Close()
+func (geneconvdb *GeneConvDB) Close() error {
+	return geneconvdb.db.Close()
 }
 
 func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpecies string, exact bool) ([]*Gene, error) {

@@ -1,13 +1,13 @@
 module github.com/antonybholmes/go-geneconv
 
-go 1.25.0
+go 1.26
 
 replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
-	github.com/antonybholmes/go-sys v0.0.0-20260403172913-edaeb305202e
+	github.com/antonybholmes/go-sys v0.0.0-20260414211834-526fb62c6da0
 	github.com/gin-gonic/gin v1.11.0
-	github.com/rs/zerolog v1.35.0
+	github.com/rs/zerolog v1.35.1
 )
 
 require (

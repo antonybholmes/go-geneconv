@@ -81,7 +81,10 @@ func ConvertRoute(c *gin.Context) {
 		ret.To = geneconv.HumanTaxo
 	}
 
-	for _, search := range params.Searches {
+	// limit size of ret.Conversions to the number of searches
+	conversions := params.Searches[0:min(len(params.Searches), geneconv.MaxSearches)]
+
+	for _, search := range conversions {
 		// Don't care about the errors, just plug empty list into failures
 		conversion, _ := geneconvdb.Convert(search,
 			fromSpecies,

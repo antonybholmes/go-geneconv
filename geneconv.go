@@ -82,7 +82,7 @@ type (
 
 const (
 	HumanToMouseSql = `SELECT DISTINCT
-		m.id, 
+		m.gene_id, 
 		m.symbol, 
 		m.entrez, 
 		m.ensembl,
@@ -92,11 +92,11 @@ const (
 		JOIN human h ON h.id = hm.human_id
 		JOIN human_aliases ha ON ha.human_id = h.id
 		JOIN aliases a ON a.id = ha.alias_id
-		WHERE a.name LIKE :search
-		ORDER BY m.symbol`
+		WHERE a.name LIKE :q
+		ORDER BY m.symbol, a.name`
 
 	HumanToHumanSql = `SELECT DISTINCT
-		h.id, 
+		h.gene_id, 
 		h.symbol, 
 		h.entrez, 
 		h.ensembl,
@@ -104,11 +104,11 @@ const (
 		FROM human h
 		JOIN human_aliases ha ON ha.human_id = h.id
 		JOIN aliases a ON a.id = ha.alias_id
-		WHERE a.name LIKE :search
-		ORDER BY h.symbol`
+		WHERE a.name LIKE :q
+		ORDER BY h.symbol, a.name`
 
 	MouseToHumanSql = `SELECT DISTINCT
-		h.id, 
+		h.gene_id, 
 		h.symbol, 
 		h.entrez, 
 		h.ensembl,
@@ -118,8 +118,22 @@ const (
 		JOIN mouse m ON m.id = hm.mouse_id
 		JOIN mouse_aliases ma ON ma.mouse_id = m.id
 		JOIN aliases a ON a.id = ma.alias_id
-		WHERE a.name LIKE :search
-		ORDER BY h.symbol`
+		WHERE h.gene_id = :search OR h.symbol LIKE :q OR h.entrez = :search OR h.ensembl = :search
+		ORDER BY h.symbol, a.name`
+
+	MouseToHumanAliasSql = `SELECT DISTINCT
+		h.gene_id, 
+		h.symbol, 
+		h.entrez, 
+		h.ensembl,
+		a.name AS alias
+		FROM human h
+		JOIN human_mouse hm ON h.id = hm.human_id
+		JOIN mouse m ON m.id = hm.mouse_id
+		JOIN mouse_aliases ma ON ma.mouse_id = m.id
+		JOIN aliases a ON a.id = ma.alias_id
+		WHERE a.name LIKE :q
+		ORDER BY h.symbol, a.name`
 
 	MouseToMouseSql = `SELECT DISTINCT
 		m.id, 
@@ -130,11 +144,13 @@ const (
 		FROM mouse m
 		JOIN mouse_aliases ma ON ma.mouse_id = m.id
 		JOIN aliases a ON a.id = ma.alias_id
-		WHERE a.name LIKE :search
-		ORDER BY m.symbol`
+		WHERE a.name LIKE :q
+		ORDER BY m.symbol, a.name`
 
 	TaxonomyHumanId = 9606
 	TaxonomyMouseId = 10090
+
+	MaxSearches = 1000
 
 	SpeciesHuman = "human"
 	SpeciesMouse = "mouse"
@@ -172,8 +188,10 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 	fromSpecies = strings.ToLower(fromSpecies)
 	toSpecies = strings.ToLower(toSpecies)
 
+	q := search
+
 	if !exact {
-		search = search + "*"
+		q += "*"
 	}
 
 	//var tax Taxonomy
@@ -188,7 +206,7 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 		//tax = MOUSE_TAX
 	} else {
 		if toSpecies == SpeciesHuman {
-			query = MouseToHumanSql
+			query = MouseToHumanAliasSql
 		} else {
 			query = MouseToMouseSql
 		}
@@ -202,14 +220,14 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 
 	log.Debug().Msgf("%s %s", query, search)
 
-	rows, err := geneconvdb.db.Query(query, sql.Named("search", search))
+	rows, err := geneconvdb.db.Query(query, sql.Named("search", search), sql.Named("q", q))
 
 	if err != nil {
 		log.Debug().Msgf("%s", err)
 		return ret, err
 	}
 
-	genes, err := rowsToGenes(rows)
+	genes, err := rowsToGenes(rows, 1)
 
 	if err != nil {
 		return ret, err
@@ -263,7 +281,7 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 // 	return rowsToGenes(rows, tax)
 // }
 
-func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
+func rowsToGenes(rows *sql.Rows, records int) ([]*Gene, error) {
 	defer rows.Close()
 
 	//log.Debug().Msgf("row to gene")
@@ -310,6 +328,11 @@ func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
 		}
 
 		if currentGene == nil || gene.GeneId != currentGene.GeneId {
+			// once we have found 1 gene, stop the search
+			if len(ret) == records {
+				break
+			}
+
 			currentGene = &gene
 			ret = append(ret, currentGene)
 		}

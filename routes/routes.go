@@ -81,10 +81,7 @@ func ConvertRoute(c *gin.Context) {
 		ret.To = geneconv.HumanTaxo
 	}
 
-	//ret.Conversions = make([]geneconv.Conversion, len(params.Searches))
-
 	for _, search := range params.Searches {
-
 		// Don't care about the errors, just plug empty list into failures
 		conversion, _ := geneconvdb.Convert(search,
 			fromSpecies,
@@ -95,6 +92,4 @@ func ConvertRoute(c *gin.Context) {
 	}
 
 	web.MakeDataResp(c, "", ret)
-
-	//web.MakeDataResp(c, "", mutationdbcache.GetInstance().List())
 }

@@ -1,14 +1,18 @@
 import collections
+import os
+import sqlite3
 import sys
+
 import pandas as pd
 from uuid_utils import uuid7
-
 
 human_id_map = collections.defaultdict(lambda: collections.defaultdict(str))
 mouse_id_map = collections.defaultdict(lambda: collections.defaultdict(str))
 
+alias_map = {}
+
 df_hugo = pd.read_csv(
-    "../data/modules/geneconv/hugo_20240524.tsv",
+    "/ifs/archive/cancer/Lab_RDF/scratch_Lab_RDF/ngs/references/hugo/hugo_approved_20260409.tsv",
     sep="\t",
     header=0,
     keep_default_na=False,
@@ -37,58 +41,63 @@ for i in range(df_hugo.shape[0]):
         ]
     )
 
+    human_id_map[hgnc]["index"] = len(human_id_map) + 1
     human_id_map[hgnc]["hgnc"] = hgnc
 
     if ensembl != "":
         human_id_map[hgnc]["ensembl"] = ensembl
-    if entrez != "":
-        human_id_map[hgnc]["entrez"] = entrez
+    if entrez.isdigit():
+        human_id_map[hgnc]["entrez"] = int(entrez)
     if symbol != "":
         human_id_map[hgnc]["symbol"] = symbol
 
-    if len(aliases) > 0:
-        human_id_map[hgnc]["tags"] = aliases
+    human_id_map[hgnc]["aliases"] = aliases
+
+    for alias in aliases:
+        if alias != "" and alias not in alias_map:
+            alias_map[alias] = len(alias_map) + 1
 
 
 df_mgi = pd.read_csv(
-    "../data/modules/geneconv/MGI_Gene_Model_Coord_20240531.rpt",
+    "/ifs/archive/cancer/Lab_RDF/scratch_Lab_RDF/ngs/references/mgi/MGI_Gene_Model_Coord_20240531.txt",
     sep="\t",
     header=0,
-    index_col=None,
     keep_default_na=False,
 )
 
 
-for i in range(df_mgi.shape[0]):
-    mgi = df_mgi["1. MGI accession id"].values[i]
+for i, row in df_mgi.iterrows():
+    mgi = row["1. MGI accession id"]
 
     if mgi == "":
         continue
 
-    ensembl = df_mgi["11. Ensembl gene id"].values[i].replace("'", "")
-    entrez = df_mgi["6. Entrez gene id"].values[i].replace("'", "")
-    symbol = df_mgi["3. marker symbol"].values[i].replace("'", "")
-    aliases = set([mgi, ensembl, entrez] + symbol.split(","))
+    ensembl = row["11. Ensembl gene id"].replace("'", "")
+    entrez = row["6. Entrez gene id"].replace("'", "")
+    symbol = row["3. marker symbol"].replace("'", "")
 
+    mouse_id_map[mgi]["index"] = len(mouse_id_map) + 1
     mouse_id_map[mgi]["mgi"] = mgi
 
     if ensembl != "":
         mouse_id_map[mgi]["ensembl"] = ensembl
 
-    if entrez != "":
-        mouse_id_map[mgi]["entrez"] = entrez
+    if entrez.isdigit():
+        mouse_id_map[mgi]["entrez"] = int(entrez)
 
     if symbol != "":
         mouse_id_map[mgi]["symbol"] = symbol
 
-    if len(aliases) > 0:
-        mouse_id_map[mgi]["tags"] = aliases
+    aliases = set([mgi, ensembl, entrez, symbol])
+    mouse_id_map[mgi]["aliases"] = aliases
 
-    print(mgi)
+    for alias in aliases:
+        if alias != "" and alias not in alias_map:
+            alias_map[alias] = len(alias_map) + 1
 
 
 df_mgi = pd.read_csv(
-    "../data/modules/geneconv/MGI_EntrezGene_20240531.rpt",
+    "/ifs/archive/cancer/Lab_RDF/scratch_Lab_RDF/ngs/references/mgi/MGI_EntrezGene_20240531.rpt",
     sep="\t",
     header=0,
     keep_default_na=False,
@@ -101,17 +110,19 @@ for i in range(df_mgi.shape[0]):
     symbol = df_mgi["MGI Marker Accession ID"].values[i]
 
     if mgi in mouse_id_map:
-        mouse_id_map[mgi]["tags"].add(symbol)
+        mouse_id_map[mgi]["aliases"].add(symbol)
 
 
 df_conv = pd.read_csv(
-    "../data/modules/geneconv/HOM_MouseHumanSequence_20240531_dleu2.tsv",
+    "/ifs/archive/cancer/Lab_RDF/scratch_Lab_RDF/ngs/references/mgi/HOM_MouseHumanSequence_20240531_dleu2.tsv",
     sep="\t",
     header=0,
     keep_default_na=False,
 )
 df_conv[df_conv["NCBI Taxon ID"].isin([10090, 9606])]
 
+# classes are pairs of human and mouse genes that are considered orthologs by MGI.
+# We will use these classes to find the mapping between human and mouse genes.
 classes = df_conv["DB Class Key"].unique()
 
 
@@ -143,8 +154,9 @@ for c in classes:
 
     # print(human_entrez, mouse_entrez)
 
-    human_mouse_map[hgnc] = mgi
-    mouse_human_map[mgi] = hgnc
+    if hgnc in human_id_map and mgi in mouse_id_map:
+        human_mouse_map[hgnc] = mgi
+        mouse_human_map[mgi] = hgnc
 
     # human_id_map[hgnc]['entrez'] = human_entrez
     # human_id_map[hgnc]['gene_symbol'] = human_symbol
@@ -155,60 +167,169 @@ for c in classes:
     # mouse_id_map[mgi]['mgi'] = mgi
 
 
-print(len(human_mouse_map))
+db = "../data/modules/geneconv/geneconv-20260603.db"
+
+if os.path.exists(db):
+    os.remove(db)
+
+conn = sqlite3.connect(db)
+conn.row_factory = sqlite3.Row
+
+cursor = conn.cursor()
+
+cursor.execute("PRAGMA journal_mode = WAL;")
+cursor.execute("PRAGMA foreign_keys = ON;")
+
+cursor.execute("""CREATE TABLE aliases (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+);""")
+
+cursor.execute("""CREATE INDEX idx_aliases_name ON aliases (LOWER(name));""")
+
+for alias, index in alias_map.items():
+    print(f"Inserting alias: {alias} with index: {index}")
+    cursor.execute(
+        """
+    INSERT INTO aliases (id, name) VALUES (?, ?);
+    """,
+        (index, alias),
+    )
 
 
-with open("../data/modules/geneconv/conv.sql", "w") as f:
+cursor.execute("""
+CREATE TABLE human (
+    id INTEGER PRIMARY KEY,
+    gene_id TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    entrez INTEGER,
+    ensembl TEXT
+);
+""")
 
-    print("BEGIN TRANSACTION;", file=f)
+cursor.execute("""CREATE INDEX idx_human_gene_id ON human (LOWER(gene_id));""")
+cursor.execute("""CREATE INDEX idx_human_symbol ON human (LOWER(symbol));""")
+cursor.execute("""CREATE INDEX idx_human_entrez ON human (entrez);""")
+cursor.execute("""CREATE INDEX idx_human_ensembl ON human (LOWER(ensembl));""")
 
-    for hgnc in sorted(human_mouse_map):
-        mgi = human_mouse_map[hgnc]
+cursor.execute("""
+               CREATE TABLE human_aliases (
+                   human_id INTEGER NOT NULL,
+                   alias_id INTEGER NOT NULL,
+                   PRIMARY KEY (human_id, alias_id),
+                   FOREIGN KEY (human_id) REFERENCES human(id) ON DELETE CASCADE,
+                   FOREIGN KEY (alias_id) REFERENCES aliases(id) ON DELETE CASCADE
+               );""")
+cursor.execute(
+    """CREATE INDEX idx_human_aliases_alias_id ON human_aliases (alias_id);"""
+)
+cursor.execute(
+    """CREATE INDEX idx_human_aliases_human_id ON human_aliases (human_id);"""
+)
 
-        symbol = human_id_map[hgnc]["symbol"].replace("'", "")
-        entrez = human_id_map[hgnc]["entrez"].replace("'", "")
-        ensembl = human_id_map[hgnc]["ensembl"].replace("'", "")
+cursor.execute("""
+CREATE TABLE mouse (
+    id INTEGER PRIMARY KEY,
+    gene_id TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    entrez INTEGER,
+    ensembl TEXT
+);
+""")
+cursor.execute("""CREATE INDEX idx_mouse_gene_id ON mouse (LOWER(gene_id));""")
+cursor.execute("""CREATE INDEX idx_mouse_symbol ON mouse (LOWER(symbol));""")
+cursor.execute("""CREATE INDEX idx_mouse_entrez ON mouse (entrez);""")
+cursor.execute("""CREATE INDEX idx_mouse_ensembl ON mouse (LOWER(ensembl));""")
 
-        human_tags = "|".join(
-            filter(lambda x: len(x) > 0, sorted(human_id_map[hgnc]["tags"]))
-        )
-        mouse_tags = "|".join(
-            filter(lambda x: len(x) > 0, sorted(mouse_id_map[mgi]["tags"]))
-        )
+cursor.execute("""
+CREATE TABLE mouse_aliases (
+    mouse_id INTEGER NOT NULL,
+    alias_id INTEGER NOT NULL,
+    PRIMARY KEY (mouse_id, alias_id),
+    FOREIGN KEY (mouse_id) REFERENCES mouse(id) ON DELETE CASCADE,
+    FOREIGN KEY (alias_id) REFERENCES aliases(id) ON DELETE CASCADE
+);""")
+cursor.execute(
+    """CREATE INDEX idx_mouse_aliases_alias_id ON mouse_aliases (alias_id);"""
+)
+cursor.execute(
+    """CREATE INDEX idx_mouse_aliases_mouse_id ON mouse_aliases (mouse_id);"""
+)
 
-        id = uuid7()
+cursor.execute("""CREATE TABLE human_mouse (
+    human_id INTEGER NOT NULL,
+    mouse_id INTEGER NOT NULL,
+    PRIMARY KEY (human_id, mouse_id),
+    FOREIGN KEY (human_id) REFERENCES human(id) ON DELETE CASCADE,
+    FOREIGN KEY (mouse_id) REFERENCES mouse(id) ON DELETE CASCADE
+);""")
 
-        # add a comma at the end of tags for exact search e.g. exactly BCL6 => 'BCL6,'
-        print(
-            f"INSERT INTO human (id, gene_symbol, entrez, ensembl, human_tags, mouse_tags) VALUES ('{hgnc}', '{symbol}', '{entrez}', '{ensembl}', '{human_tags}', '{mouse_tags}');",
-            file=f,
-        )
+for hgnc in sorted(human_mouse_map):
+    index = human_id_map[hgnc]["index"]
+    symbol = human_id_map[hgnc]["symbol"].replace("'", "")
+    entrez = human_id_map[hgnc]["entrez"]
+    ensembl = human_id_map[hgnc]["ensembl"].replace("'", "")
 
-    print("COMMIT;", file=f)
+    print(index, hgnc, symbol, entrez, ensembl)
 
-    print("BEGIN TRANSACTION;", file=f)
+    cursor.execute(
+        """
+    INSERT INTO human (id, gene_id, symbol, entrez, ensembl) VALUES (?, ?, ?, ?, ?);
+    """,
+        (index, hgnc, symbol, entrez, ensembl),
+    )
 
-    for mgi in sorted(mouse_human_map):
-        hgnc = mouse_human_map[mgi]
+    aliases = human_id_map[hgnc]["aliases"]
 
-        symbol = mouse_id_map[mgi]["symbol"]
+    for alias in aliases:
+        if alias != "":
+            alias_id = alias_map[alias]
+            cursor.execute(
+                """
+            INSERT INTO human_aliases (human_id, alias_id) VALUES (?, ?);
+            """,
+                (index, alias_id),
+            )
 
-        entrez = mouse_id_map[mgi]["entrez"]
+for mgi in sorted(mouse_human_map):
 
-        ensembl = mouse_id_map[mgi]["ensembl"]
+    index = mouse_id_map[mgi]["index"]
+    symbol = mouse_id_map[mgi]["symbol"].replace("'", "")
+    entrez = mouse_id_map[mgi]["entrez"]
+    ensembl = mouse_id_map[mgi]["ensembl"].replace("'", "")
 
-        human_tags = "|".join(
-            filter(lambda x: len(x) > 0, sorted(human_id_map[hgnc]["tags"]))
-        )
-        mouse_tags = "|".join(
-            filter(lambda x: len(x) > 0, sorted(mouse_id_map[mgi]["tags"]))
-        )
+    print(index, mgi, symbol, entrez, ensembl)
+    cursor.execute(
+        """
+    INSERT INTO mouse (id, gene_id, symbol, entrez, ensembl) VALUES (?, ?, ?, ?, ?);
+    """,
+        (index, mgi, symbol, entrez, ensembl),
+    )
 
-        id = uuid7()
+    aliases = mouse_id_map[mgi]["aliases"]
 
-        print(
-            f"INSERT INTO mouse (id, gene_symbol, entrez, ensembl, human_tags, mouse_tags) VALUES ('{mgi}', '{symbol}', '{entrez}', '{ensembl}', '{human_tags}', '{mouse_tags}');",
-            file=f,
-        )
+    for alias in aliases:
+        if alias != "":
+            alias_id = alias_map[alias]
+            cursor.execute(
+                """
+            INSERT INTO mouse_aliases (mouse_id, alias_id) VALUES (?, ?);
+            """,
+                (index, alias_id),
+            )
 
-    print("COMMIT;", file=f)
+for hgnc in sorted(human_mouse_map):
+    mgi = human_mouse_map[hgnc]
+
+    human_index = human_id_map[hgnc]["index"]
+    mouse_index = mouse_id_map[mgi]["index"]
+
+    cursor.execute(
+        """
+    INSERT INTO human_mouse (human_id, mouse_id) VALUES (?, ?);
+    """,
+        (human_index, mouse_index),
+    )
+
+conn.commit()
+conn.close()

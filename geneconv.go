@@ -52,17 +52,17 @@ type (
 	// }
 
 	Gene struct {
-		Id      string   `json:"id"`
+		GeneId  string   `json:"geneId"`
 		Symbol  string   `json:"symbol"`
-		Entrez  string   `json:"entrez"`
 		Ensembl string   `json:"ensembl"`
 		Aliases []string `json:"-"`
+		Entrez  int      `json:"entrez"`
 	}
 
-	Conversion struct {
-		Search string  `json:"id"`
-		Genes  []*Gene `json:"genes"`
-	}
+	// Conversion struct {
+	// 	Search string  `json:"id"`
+	// 	Genes  []*Gene `json:"genes"`
+	// }
 
 	ConversionResults struct {
 		From        Taxonomy  `json:"from"`
@@ -81,21 +81,57 @@ type (
 )
 
 const (
-	HumanToMouseSql = `SELECT mouse.id, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
- 	FROM mouse
-   	WHERE mouse.human_tags MATCH ?1 ORDER BY rank, mouse.gene_symbol`
+	HumanToMouseSql = `SELECT DISTINCT
+		m.id, 
+		m.symbol, 
+		m.entrez, 
+		m.ensembl,
+		a.name AS alias
+		FROM mouse m
+		JOIN human_mouse hm ON m.id = hm.mouse_id
+		JOIN human h ON h.id = hm.human_id
+		JOIN human_aliases ha ON ha.human_id = h.id
+		JOIN aliases a ON a.id = ha.alias_id
+		WHERE a.name LIKE :search
+		ORDER BY m.symbol`
 
-	HumanToHumanSql = `SELECT human.id, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
-	FROM human
-	WHERE human.human_tags MATCH ?1 ORDER BY rank, human.gene_symbol`
+	HumanToHumanSql = `SELECT DISTINCT
+		h.id, 
+		h.symbol, 
+		h.entrez, 
+		h.ensembl,
+		a.name AS alias
+		FROM human h
+		JOIN human_aliases ha ON ha.human_id = h.id
+		JOIN aliases a ON a.id = ha.alias_id
+		WHERE a.name LIKE :search
+		ORDER BY h.symbol`
 
-	MouseToHumanSql = `SELECT human.id, human.gene_symbol, human.entrez, human.ensembl, human.human_tags
-	FROM human
-	WHERE human.mouse_tags MATCH ?1 ORDER BY rank, human.gene_symbol`
+	MouseToHumanSql = `SELECT DISTINCT
+		h.id, 
+		h.symbol, 
+		h.entrez, 
+		h.ensembl,
+		a.name AS alias
+		FROM human h
+		JOIN human_mouse hm ON h.id = hm.human_id
+		JOIN mouse m ON m.id = hm.mouse_id
+		JOIN mouse_aliases ma ON ma.mouse_id = m.id
+		JOIN aliases a ON a.id = ma.alias_id
+		WHERE a.name LIKE :search
+		ORDER BY h.symbol`
 
-	MouseToMouseSql = `SELECT mouse.id, mouse.gene_symbol, mouse.entrez, mouse.ensembl, mouse.mouse_tags
-	FROM mouse
-	WHERE mouse.mouse_tags MATCH ?1 ORDER BY rank, mouse.gene_symbol`
+	MouseToMouseSql = `SELECT DISTINCT
+		m.id, 
+		m.symbol, 
+		m.entrez, 
+		m.ensembl,
+		a.name AS alias
+		FROM mouse m
+		JOIN mouse_aliases ma ON ma.mouse_id = m.id
+		JOIN aliases a ON a.id = ma.alias_id
+		WHERE a.name LIKE :search
+		ORDER BY m.symbol`
 
 	TaxonomyHumanId = 9606
 	TaxonomyMouseId = 10090
@@ -126,7 +162,7 @@ func (geneconvdb *GeneConvDB) Close() error {
 }
 
 func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpecies string, exact bool) ([]*Gene, error) {
-	var sql string
+	var query string
 
 	//var ret Conversion
 
@@ -144,17 +180,17 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 
 	if fromSpecies == SpeciesHuman {
 		if toSpecies == SpeciesMouse {
-			sql = HumanToMouseSql
+			query = HumanToMouseSql
 		} else {
-			sql = HumanToHumanSql
+			query = HumanToHumanSql
 		}
 
 		//tax = MOUSE_TAX
 	} else {
 		if toSpecies == SpeciesHuman {
-			sql = MouseToHumanSql
+			query = MouseToHumanSql
 		} else {
-			sql = MouseToMouseSql
+			query = MouseToMouseSql
 		}
 
 		//tax = HUMAN_TAX
@@ -164,9 +200,9 @@ func (geneconvdb *GeneConvDB) Convert(search string, fromSpecies string, toSpeci
 	// 	search = fmt.Sprintf("%%%s%%", search)
 	// }
 
-	//log.Debug().Msgf("%s %s", sql, search)
+	log.Debug().Msgf("%s %s", query, search)
 
-	rows, err := geneconvdb.db.Query(sql, search)
+	rows, err := geneconvdb.db.Query(query, sql.Named("search", search))
 
 	if err != nil {
 		log.Debug().Msgf("%s", err)
@@ -232,12 +268,14 @@ func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
 
 	//log.Debug().Msgf("row to gene")
 
-	var aliases string
+	var alias string
 	//var entrez string
 	//var refseq string
 	//var ensembl string
 
 	var ret = make([]*Gene, 0, 5)
+
+	var currentGene *Gene = nil
 
 	for rows.Next() {
 		var gene Gene
@@ -245,16 +283,17 @@ func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
 		//gene.Taxonomy = tax
 
 		err := rows.Scan(
-			&gene.Id,
+			&gene.GeneId,
 			&gene.Symbol,
 			&gene.Entrez,
 			&gene.Ensembl,
-			&aliases)
-
-		//log.Debug().Msgf("err %s", err)
+			&alias,
+		)
 
 		// keep going even if there is a failure
-		if err == nil {
+		if err != nil {
+			log.Debug().Msgf("err %s", err)
+
 			// convert entrez to numbers
 			// for _, e := range strings.Split(entrez, ",") {
 			// 	n, err := strconv.Parseint(e, 10, 64)
@@ -264,12 +303,19 @@ func rowsToGenes(rows *sql.Rows) ([]*Gene, error) {
 			// 	}
 			// }
 
-			gene.Aliases = strings.Split(aliases, "|")
+			//gene.Aliases = strings.Split(aliases, "|")
 			//gene.RefSeq = strings.Split(refseq, "|")
 			//gene.Ensembl = strings.Split(ensembl, "|")
+			continue
 		}
 
-		ret = append(ret, &gene)
+		if currentGene == nil || gene.GeneId != currentGene.GeneId {
+			currentGene = &gene
+			ret = append(ret, currentGene)
+		}
+
+		currentGene.Aliases = append(currentGene.Aliases, alias)
+
 	}
 
 	return ret, nil

@@ -27,19 +27,22 @@ for i in range(df_hugo.shape[0]):
     ensembl = df_hugo["Ensembl gene ID"].values[i].replace("'", "")
     entrez = df_hugo["NCBI Gene ID"].values[i].replace("'", "")
     symbol = df_hugo["Approved symbol"].values[i].replace("'", "")
-    aliases = set([hgnc, ensembl, entrez, symbol])
+    refseq = "|".join(
+        [x.strip() for x in df_hugo["RefSeq IDs"].values[i].replace("'", "").split(",")]
+    )
+    aliases = set()  # [hgnc, ensembl, entrez, symbol])
     aliases.update(
         [
             x.strip()
             for x in df_hugo["Previous symbols"].values[i].replace("'", "").split(",")
         ]
     )
-    aliases.update(
-        [
-            x.strip()
-            for x in df_hugo["Alias symbols"].values[i].replace("'", "").split(",")
-        ]
-    )
+    # aliases.update(
+    #     [
+    #         x.strip()
+    #         for x in df_hugo["Alias symbols"].values[i].replace("'", "").split(",")
+    #     ]
+    # )
 
     human_id_map[hgnc]["index"] = len(human_id_map) + 1
     human_id_map[hgnc]["hgnc"] = hgnc
@@ -50,6 +53,8 @@ for i in range(df_hugo.shape[0]):
         human_id_map[hgnc]["entrez"] = int(entrez)
     if symbol != "":
         human_id_map[hgnc]["symbol"] = symbol
+    if refseq != "":
+        human_id_map[hgnc]["refseq"] = refseq
 
     human_id_map[hgnc]["aliases"] = aliases
 
@@ -88,7 +93,7 @@ for i, row in df_mgi.iterrows():
     if symbol != "":
         mouse_id_map[mgi]["symbol"] = symbol
 
-    aliases = set([mgi, ensembl, entrez, symbol])
+    aliases = set()  # [mgi, ensembl, entrez, symbol])
     mouse_id_map[mgi]["aliases"] = aliases
 
     for alias in aliases:
@@ -107,10 +112,13 @@ df_mgi = df_mgi[df_mgi["Status"] == "W"]
 for i in range(df_mgi.shape[0]):
     mgi = df_mgi["MGI Marker Accession ID"].values[i]
     # old name
-    symbol = df_mgi["MGI Marker Accession ID"].values[i]
+    symbol = df_mgi["Marker Symbol"].values[i]
 
     if mgi in mouse_id_map:
         mouse_id_map[mgi]["aliases"].add(symbol)
+
+        if symbol != "" and symbol not in alias_map:
+            alias_map[symbol] = len(alias_map) + 1
 
 
 df_conv = pd.read_csv(
@@ -152,11 +160,25 @@ for c in classes:
     mouse_entrez = df_mouse["EntrezGene ID"].values[0]
     mgi = df_mouse["Mouse MGI ID"].values[0].replace("'", "")
 
+    refseq = "|".join(
+        [
+            x.strip()
+            for x in df_mouse["Nucleotide RefSeq IDs"]
+            .values[0]
+            .replace("'", "")
+            .split(",")
+        ]
+    )
+
     # print(human_entrez, mouse_entrez)
 
     if hgnc in human_id_map and mgi in mouse_id_map:
         human_mouse_map[hgnc] = mgi
         mouse_human_map[mgi] = hgnc
+
+        # fix the mouse refseq
+        if refseq != "":
+            mouse_id_map[mgi]["refseq"] = refseq
 
     # human_id_map[hgnc]['entrez'] = human_entrez
     # human_id_map[hgnc]['gene_symbol'] = human_symbol
@@ -203,6 +225,7 @@ CREATE TABLE human (
     gene_id TEXT NOT NULL,
     symbol TEXT NOT NULL,
     entrez INTEGER,
+    refseq TEXT,
     ensembl TEXT
 );
 """)
@@ -210,10 +233,11 @@ CREATE TABLE human (
 cursor.execute("""CREATE INDEX idx_human_gene_id ON human (LOWER(gene_id));""")
 cursor.execute("""CREATE INDEX idx_human_symbol ON human (LOWER(symbol));""")
 cursor.execute("""CREATE INDEX idx_human_entrez ON human (entrez);""")
+cursor.execute("""CREATE INDEX idx_human_refseq ON human (LOWER(refseq));""")
 cursor.execute("""CREATE INDEX idx_human_ensembl ON human (LOWER(ensembl));""")
 
 cursor.execute("""
-               CREATE TABLE human_aliases (
+               CREATE TABLE human_previous_symbols (
                    human_id INTEGER NOT NULL,
                    alias_id INTEGER NOT NULL,
                    PRIMARY KEY (human_id, alias_id),
@@ -221,10 +245,10 @@ cursor.execute("""
                    FOREIGN KEY (alias_id) REFERENCES aliases(id) ON DELETE CASCADE
                );""")
 cursor.execute(
-    """CREATE INDEX idx_human_aliases_alias_id ON human_aliases (alias_id);"""
+    """CREATE INDEX idx_human_previous_symbols_alias_id ON human_previous_symbols (alias_id);"""
 )
 cursor.execute(
-    """CREATE INDEX idx_human_aliases_human_id ON human_aliases (human_id);"""
+    """CREATE INDEX idx_human_previous_symbols_human_id ON human_previous_symbols (human_id);"""
 )
 
 cursor.execute("""
@@ -233,16 +257,18 @@ CREATE TABLE mouse (
     gene_id TEXT NOT NULL,
     symbol TEXT NOT NULL,
     entrez INTEGER,
+    refseq TEXT,
     ensembl TEXT
 );
 """)
 cursor.execute("""CREATE INDEX idx_mouse_gene_id ON mouse (LOWER(gene_id));""")
 cursor.execute("""CREATE INDEX idx_mouse_symbol ON mouse (LOWER(symbol));""")
 cursor.execute("""CREATE INDEX idx_mouse_entrez ON mouse (entrez);""")
+cursor.execute("""CREATE INDEX idx_mouse_refseq ON mouse (LOWER(refseq));""")
 cursor.execute("""CREATE INDEX idx_mouse_ensembl ON mouse (LOWER(ensembl));""")
 
 cursor.execute("""
-CREATE TABLE mouse_aliases (
+CREATE TABLE mouse_previous_symbols (
     mouse_id INTEGER NOT NULL,
     alias_id INTEGER NOT NULL,
     PRIMARY KEY (mouse_id, alias_id),
@@ -250,10 +276,10 @@ CREATE TABLE mouse_aliases (
     FOREIGN KEY (alias_id) REFERENCES aliases(id) ON DELETE CASCADE
 );""")
 cursor.execute(
-    """CREATE INDEX idx_mouse_aliases_alias_id ON mouse_aliases (alias_id);"""
+    """CREATE INDEX idx_mouse_previous_symbols_alias_id ON mouse_previous_symbols (alias_id);"""
 )
 cursor.execute(
-    """CREATE INDEX idx_mouse_aliases_mouse_id ON mouse_aliases (mouse_id);"""
+    """CREATE INDEX idx_mouse_previous_symbols_mouse_id ON mouse_previous_symbols (mouse_id);"""
 )
 
 cursor.execute("""CREATE TABLE human_mouse (
@@ -269,14 +295,15 @@ for hgnc in sorted(human_mouse_map):
     symbol = human_id_map[hgnc]["symbol"].replace("'", "")
     entrez = human_id_map[hgnc]["entrez"]
     ensembl = human_id_map[hgnc]["ensembl"].replace("'", "")
+    refseq = human_id_map[hgnc]["refseq"].replace("'", "")
 
     print(index, hgnc, symbol, entrez, ensembl)
 
     cursor.execute(
         """
-    INSERT INTO human (id, gene_id, symbol, entrez, ensembl) VALUES (?, ?, ?, ?, ?);
+    INSERT INTO human (id, gene_id, symbol, entrez, ensembl, refseq) VALUES (?, ?, ?, ?, ?, ?);
     """,
-        (index, hgnc, symbol, entrez, ensembl),
+        (index, hgnc, symbol, entrez, ensembl, refseq),
     )
 
     aliases = human_id_map[hgnc]["aliases"]
@@ -286,7 +313,7 @@ for hgnc in sorted(human_mouse_map):
             alias_id = alias_map[alias]
             cursor.execute(
                 """
-            INSERT INTO human_aliases (human_id, alias_id) VALUES (?, ?);
+            INSERT INTO human_previous_symbols (human_id, alias_id) VALUES (?, ?);
             """,
                 (index, alias_id),
             )
@@ -297,13 +324,14 @@ for mgi in sorted(mouse_human_map):
     symbol = mouse_id_map[mgi]["symbol"].replace("'", "")
     entrez = mouse_id_map[mgi]["entrez"]
     ensembl = mouse_id_map[mgi]["ensembl"].replace("'", "")
+    refseq = mouse_id_map[mgi]["refseq"].replace("'", "")
 
-    print(index, mgi, symbol, entrez, ensembl)
+    print(index, mgi, symbol, entrez, ensembl, refseq)
     cursor.execute(
         """
-    INSERT INTO mouse (id, gene_id, symbol, entrez, ensembl) VALUES (?, ?, ?, ?, ?);
+    INSERT INTO mouse (id, gene_id, symbol, entrez, ensembl, refseq) VALUES (?, ?, ?, ?, ?, ?);
     """,
-        (index, mgi, symbol, entrez, ensembl),
+        (index, mgi, symbol, entrez, ensembl, refseq),
     )
 
     aliases = mouse_id_map[mgi]["aliases"]
@@ -313,7 +341,7 @@ for mgi in sorted(mouse_human_map):
             alias_id = alias_map[alias]
             cursor.execute(
                 """
-            INSERT INTO mouse_aliases (mouse_id, alias_id) VALUES (?, ?);
+            INSERT INTO mouse_previous_symbols (mouse_id, alias_id) VALUES (?, ?);
             """,
                 (index, alias_id),
             )

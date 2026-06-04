@@ -21,7 +21,7 @@ func GetInstance() *geneconv.GeneConvDB {
 	return instance
 }
 
-func Convert(search string, fromSpecies string, toSpecies string, exact bool) ([]*geneconv.Gene, error) {
+func Convert(search string, fromSpecies string, toSpecies string, exact bool) (*geneconv.Conversion, error) {
 	return instance.Convert(search, fromSpecies, toSpecies, exact)
 }
 

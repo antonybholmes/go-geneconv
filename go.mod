@@ -2,7 +2,7 @@ module github.com/antonybholmes/go-geneconv
 
 go 1.26
 
-replace github.com/antonybholmes/go-sys => ../go-sys
+// replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
 	github.com/antonybholmes/go-sys v0.0.0-20260616152946-01b9b0d3a79b

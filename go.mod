@@ -5,7 +5,7 @@ go 1.26
 replace github.com/antonybholmes/go-sys => ../go-sys
 
 require (
-	github.com/antonybholmes/go-sys v0.0.0-20260616152946-01b9b0d3a79b
+	github.com/antonybholmes/go-sys v0.0.0-20260626223512-c00680dc89c9
 	github.com/gin-gonic/gin v1.11.0
 	github.com/rs/zerolog v1.35.1
 )

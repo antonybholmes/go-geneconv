@@ -17,14 +17,6 @@ func InitGeneConvDB(file string) *geneconv.GeneConvDB {
 	return instance
 }
 
-func GetInstance() *geneconv.GeneConvDB {
+func Instance() *geneconv.GeneConvDB {
 	return instance
 }
-
-func Convert(search string, fromSpecies string, toSpecies string, exact bool) (*geneconv.Conversion, error) {
-	return instance.Convert(search, fromSpecies, toSpecies, exact)
-}
-
-// func GeneInfo(search string, species string, exact bool) ([]*geneconv.Gene, error) {
-// 	return instance.GeneInfo(search, species, exact)
-// }
